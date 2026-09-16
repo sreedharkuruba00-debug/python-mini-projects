@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>Smart Hotel Admin</title>
+
+<style>
+
+body {
+    font-family: Arial;
+    background: #f5f7fb;
+    padding: 20px;
+}
+
+.box {
+    background: white;
+    padding: 18px;
+    border-radius: 16px;
+    margin: 12px 0;
+}
+
+button {
+    padding: 8px;
+    margin: 3px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+}
+
+.order {
+    border-bottom: 1px solid #ddd;
+    padding: 12px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🏨 Smart Hotel Admin</h1>
+
+
+<div class="box">
+
+<h2>🪑 Tables</h2>
+
+<div id="tables"></div>
+
+</div>
+
+
+<div class="box">
+
+<h2>📋 Orders</h2>
+
+<div id="orders"></div>
+
+</div>
+
+
+<script>
+
+
+async function load() {
+
+
+    let tables =
+        await fetch(
+            "/api/tables"
+        ).then(
+            response =>
+            response.json()
+        );
+
+
+    document.getElementById(
+        "tables"
+    ).innerHTML =
+
+    tables.map(table => `
+
+        <p>
+
+        <b>
+        Table ${table.id}
+        </b>
+
+        :
+
+        ${table.status}
+
+        <button
+            onclick="
+            updateTable(
+                ${table.id},
+                'free'
+            )
+            ">
+
+            Free
+
+        </button>
+
+
+        <button
+            onclick="
+            updateTable(
+                ${table.id},
+                'occupied'
+            )
+            ">
+
+            Occupied
+
+        </button>
+
+        </p>
+
+    `).join("");
+
+
+    let orders =
+        await fetch(
+            "/api/orders"
+        ).then(
+            response =>
+            response.json()
+        );
+
+
+    document.getElementById(
+        "orders"
+    ).innerHTML =
+
+    orders.map(order => `
+
+        <div class="order">
+
+        <b>
+        Order #${order.id}
+        </b>
+
+        <br>
+
+        Table:
+        ${order.table_id}
+
+        <br>
+
+        Amount:
+        ₹${order.total}
+
+        <br>
+
+        Status:
+        ${order.status}
+
+        <br><br>
+
+
+        <button
+            onclick="
+            updateOrder(
+                ${order.id},
+                'preparing'
+            )
+            ">
+
+            Preparing
+
+        </button>
+
+
+        <button
+            onclick="
+            updateOrder(
+                ${order.id},
+                'ready'
+            )
+            ">
+
+            Ready
+
+        </button>
+
+
+        <button
+            onclick="
+            updateOrder(
+                ${order.id},
+                'completed'
+            )
+            ">
+
+            Completed
+
+        </button>
+
+
+        <button
+            onclick="
+            updateOrder(
+                ${order.id},
+                'cancelled'
+            )
+            ">
+
+            Cancel
+
+        </button>
+
+
+        </div>
+
+    `).join("");
+
+}
+
+
+async function updateTable(
+    id,
+    status
+) {
+
+    await fetch(
+        `/api/tables/${id}/${status}`,
+        {
+            method: "PUT"
+        }
+    );
+
+    load();
+
+}
+
+
+async function updateOrder(
+    id,
+    status
+) {
+
+    await fetch(
+        `/api/orders/${id}/${status}`,
+        {
+            method: "PUT"
+        }
+    );
+
+    load();
+
+}
+
+
+load();
+
+
+setInterval(
+    load,
+    5000
+);
+
+</script>
+
+</body>
+
+</html>
