@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+
+<title>Smart Hotel</title>
+
+<style>
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fb;
+    color: #172033;
+}
+
+header {
+    background: #111827;
+    color: white;
+    padding: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+main {
+    max-width: 1100px;
+    margin: auto;
+    padding: 18px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+    repeat(auto-fit, minmax(210px, 1fr));
+
+    gap: 16px;
+}
+
+.card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px #0001;
+}
+
+.card img {
+    width: 100%;
+    height: 145px;
+    object-fit: cover;
+}
+
+.pad {
+    padding: 14px;
+}
+
+.btn {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+}
+
+.section {
+    margin: 22px 0;
+}
+
+.tables {
+    position: relative;
+    height: 280px;
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #ddd;
+}
+
+.table {
+    position: absolute;
+    width: 75px;
+    height: 48px;
+    border-radius: 12px;
+    border: 0;
+    font-weight: bold;
+}
+
+.free {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.occupied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.cart {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 16px #0001;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<b>🏨 Smart Hotel</b>
+
+</header>
+
+<main>
+
+<div class="section">
+
+<h2>Choose a Table</h2>
+
+<div id="tables"
+     class="tables">
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>🍴 Menu</h2>
+
+<div id="menu"
+     class="grid">
+</div>
+
+</div>
+
+
+<div class="section cart">
+
+<h2>🛒 Cart</h2>
+
+<div id="cart">
+Cart is empty
+</div>
+
+<br>
+
+<button id="order"
+        class="btn"
+        disabled>
+
+Place Order
+
+</button>
+
+</div>
+
+
+<div id="msg"></div>
+
+</main>
+
+
+<script>
+
+let foods = [];
+
+let tables = [];
+
+let cart = {};
+
+let selectedTable = null;
+
+
+async function loadData() {
+
+    foods =
+        await fetch("/api/foods")
+        .then(response => response.json());
+
+    tables =
+        await fetch("/api/tables")
+        .then(response => response.json());
+
+    render();
+
+}
+
+
+function render() {
+
+    document.getElementById(
+        "tables"
+    ).innerHTML = tables.map(table => `
+
+        <button
+            class="table ${table.status}"
+            style="
+                left:${table.x}%;
+                top:${table.y}%
+            "
+
+            ${table.status !== "free"
+                ? "disabled"
+                : ""}
+
+            onclick="
+                selectedTable=${table.id};
+                render();
+            "
+        >
+
+        ${table.label}
+
+        </button>
+
+    `).join("");
+
+
+    document.getElementById(
+        "menu"
+    ).innerHTML = foods.map(food => `
+
+        <div class="card">
+
+            <img src="${food.image}">
+
+            <div class="pad">
+
+                <b>${food.name}</b>
+
+                <p>
+                    ${food.description}
+                </p>
+
+                <strong>
+                    ₹${food.price}
+                </strong>
+
+                <br><br>
+
+                <button
+                    class="btn"
+                    onclick="addToCart(${food.id})">
+
+                    Add
+
+                </button>
+
+            </div>
+
+        </div>
+
+    `).join("");
+
+
+    let ids =
+        Object.keys(cart);
+
+    let total = 0;
+
+
+    if (ids.length > 0) {
+
+        document.getElementById(
+            "cart"
+        ).innerHTML =
+
+        ids.map(id => {
+
+            let food =
+                foods.find(
+                    f => f.id == id
+                );
+
+            let quantity =
+                cart[id];
+
+            total +=
+                food.price * quantity;
+
+            return `
+                ${food.name}
+                × ${quantity}
+                — ₹${food.price * quantity}
+                <br>
+            `;
+
+        }).join("")
+
+        + `
+
+        <hr>
+
+        <b>Total: ₹${total}</b>
+
+        <br>
+
+        Table:
+        ${selectedTable || "Not selected"}
+
+        `;
+
+    } else {
+
+        document.getElementById(
+            "cart"
+        ).innerHTML =
+        "Cart is empty";
+
+    }
+
+
+    document.getElementById(
+        "order"
+    ).disabled =
+        ids.length === 0 ||
+        !selectedTable;
+
+}
+
+
+function addToCart(id) {
+
+    cart[id] =
+        (cart[id] || 0) + 1;
+
+    render();
+
+}
+
+
+document.getElementById(
+    "order"
+).onclick = async function() {
+
+    let items =
+        Object.entries(cart)
+        .map(([food_id, quantity]) => ({
+            food_id: Number(food_id),
+            quantity: quantity
+        }));
+
+
+    let response =
+        await fetch(
+            "/api/orders",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                    "application/json"
+                },
+
+                body: JSON.stringify({
+                    table_id:
+                    selectedTable,
+
+                    items: items
+                })
+            }
+        );
+
+
+    let data =
+        await response.json();
+
+
+    if (response.ok) {
+
+        document.getElementById(
+            "msg"
+        ).innerHTML = `
+
+        <h3>
+        ✅ Order #${data.id}
+        placed successfully!
+        </h3>
+
+        <p>
+        Total: ₹${data.total}
+        </p>
+
+        `;
+
+        cart = {};
+
+        selectedTable = null;
+
+        await loadData();
+
+    } else {
+
+        document.getElementById(
+            "msg"
+        ).innerHTML = `
+
+        <h3>
+        ❌ ${data.detail}
+        </h3>
+
+        `;
+
+    }
+
+};
+
+
+loadData();
+
+</script>
+
+</body>
+
+</html>
